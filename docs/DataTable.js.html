@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width">
+	<title>DynamicsNode Source: DataTable.js</title>
+
+	<!--[if lt IE 9]>
+	<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+	<link type="text/css" rel="stylesheet" href="styles/sunlight.default.css">
+
+	<link type="text/css" rel="stylesheet" href="styles/site.spacelab.css">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top navbar-inverse">
+<div class="container">
+	<div class="navbar-header">
+		<a class="navbar-brand" href="index.html">DynamicsNode</a>
+		<button class="navbar-toggle" type="button" data-toggle="collapse" data-target="#topNavigation">
+			<span class="icon-bar"></span>
+			<span class="icon-bar"></span>
+			<span class="icon-bar"></span>
+        </button>
+	</div>
+	<div class="navbar-collapse collapse" id="topNavigation">
+		<ul class="nav navbar-nav">
+			
+			<li class="dropdown">
+				<a href="classes.list.html" class="dropdown-toggle" data-toggle="dropdown">Classes<b class="caret"></b></a>
+				<ul class="dropdown-menu ">
+					<li><a href="CRMClient.html">CRMClient</a></li><li><a href="DataTable.html">DataTable</a></li><li><a href="DataTableJsonSerializer.html">DataTableJsonSerializer</a></li><li><a href="DataTableSerializer.html">DataTableSerializer</a></li><li><a href="DataTableXlsSerializer.html">DataTableXlsSerializer</a></li><li><a href="DataTableXmlSerializer.html">DataTableXmlSerializer</a></li><li><a href="Fetch.html">Fetch</a></li><li><a href="Filter.html">Filter</a></li><li><a href="Guid.html">Guid</a></li>
+				</ul>
+			</li>
+			
+			<li class="dropdown">
+				<a href="tutorials.list.html" class="dropdown-toggle" data-toggle="dropdown">Tutorials<b class="caret"></b></a>
+				<ul class="dropdown-menu ">
+					<li><a href="tutorial-CommandsAndRepl.html">CommandsAndRepl</a></li><li><a href="tutorial-CompileAndTesting.html">CompileAndTesting</a></li>
+				</ul>
+			</li>
+			
+			<li class="dropdown">
+				<a href="global.html" class="dropdown-toggle" data-toggle="dropdown">Global<b class="caret"></b></a>
+				<ul class="dropdown-menu ">
+					<li><a href="global.html">Global</a></li>
+				</ul>
+			</li>
+			
+		</ul>
+        
+            <div class="col-sm-3 col-md-3">
+                <form class="navbar-form" role="search">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Search" name="q" id="search-input">
+                        <div class="input-group-btn">
+                            <button class="btn btn-default" id="search-submit"><i class="glyphicon glyphicon-search"></i></button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        
+	</div>
+
+</div>
+</div>
+
+
+<div class="container" id="toc-content">
+<div class="row">
+
+	
+	<div class="col-md-12">
+	
+		<div id="main">
+			
+
+		<h1 class="page-title">Source: DataTable.js</h1>
+    
+<section>
+    <article>
+        <pre
+            class="sunlight-highlight-javascript linenums">"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+var DataTableSerializer_1 = require("./DataTableSerializer");
+var debug = require('debug')('dynamicsnode');
+var DataTable = (function () {
+    /** Default constructor
+     * @class DataTable
+     * @classdesc Represents a DataTable object. Contains methods to save and load the row values from a file.
+     */
+    function DataTable(name, rows) {
+        this.name = name;
+        this.rows = [];
+        if (rows !== undefined) {
+            this.rows = rows;
+        }
+    }
+    /**
+     * Callback that receives a row of a data table and returns a value for a column
+     * @callback DataTable~lookupCallback
+     * @param {object} row Object containing the values of a row
+     * @return {object} The value to apply to a specific column of that particular row
+     */
+    /** Method to convert all the existing values in a column.
+     * Iterates through all the existing rows, and for every value in the specified column calls to the specified callback method.
+     * Then, the returning value will be applied to the column.
+     * The idea behind this functionality is that you can resolve the lookup data that you may have in a DataTable, before sending
+     * those values to CRM.
+     * For example, you may want to load a list of contacts, and you want to associate your contacts to existing parent accounts.
+     * What you can do, is use the phone number on the contact to try to find the parent account of the contact.
+     * @param {string} columnName Name of the column which values are going to be updated
+     * @param {DataTable~lookupCallback} updater Function that will process every record in the Table.
+     * @method DataTable#lookup
+     * @example &lt;caption>Lookup using simple values&lt;/caption>
+     *  var dt = new DataTable();
+     *  dt.rows.push({val1:1,val2:2},
+     *               {val1:2,val2:2});
+     *  dt.lookup('val1',row=>++row.val1);
+     *  console.log(dt.rows[0].val1); // prints out 2
+     *  console.log(dt.rows[1].val1); // prints out 3
+     * @example &lt;caption>Find the parent account of a contact using the phone number&lt;/caption>
+     *  // create a contact using a data table and associate to the create account using the phone number
+     *  var dtContacts = DataTable.load("MyContactsToLoad.json");
+     *
+     *  // resolve the parentcustomerid field
+     *  dtContacts.lookup("parentcustomerid",row=>{ return {id:crm.retrieve("account",{telephone1:row.telephone1}).accountid,type:"account"}});
+     *
+     *  // create the record
+     *  crm.create(dtContacts);
+     */
+    DataTable.prototype.lookup = function (columnName, updater, useCache) {
+        if (useCache === void 0) { useCache = true; }
+        var cache = {}; // Temporary cache 
+        debug("Resolving lookups for columm '" + columnName + "'. " + (useCache ? "Using Cache" : "") + "...");
+        for (var i = 0; i &lt; this.rows.length; i++) {
+            debug(i + " of " + this.rows.length);
+            var currentRow = this.rows[i];
+            var lookupValue = currentRow[columnName];
+            var resolvedValue = null;
+            if (useCache &amp;&amp; lookupValue !== undefined &amp;&amp; lookupValue !== null &amp;&amp; cache[lookupValue] !== undefined) {
+                debug("Resolved Lookup '" + columnName + "' value '" + lookupValue + "' using cache");
+                resolvedValue = cache[lookupValue];
+                debug("resolved value: '" + resolvedValue + "'");
+            }
+            else {
+                resolvedValue = updater(currentRow);
+                if (useCache &amp;&amp; lookupValue !== undefined &amp;&amp; lookupValue !== null) {
+                    // add the resolved value to the cache
+                    cache[lookupValue] = resolvedValue;
+                }
+            }
+            if (resolvedValue === undefined) {
+                if (currentRow[columnName] !== undefined) {
+                    delete currentRow[columnName];
+                }
+            }
+            else {
+                currentRow[columnName] = resolvedValue;
+            }
+        }
+    };
+    /** Removes a column from the Table
+     * @method DataTable#removeColumn
+     * @param columnName {string} Name of the column to remove
+     * @example &lt;caption>Remove an existing column&lt;/caption>
+     *  var dt = new DataTable();
+     *  dt.rows.push({val1:1,val2:2},
+     *               {val1:2,val2:2});
+     *  dt.removeColumn('val1');
+     *  console.log(dt.rows[0].val1); // prints undefined
+     *  console.log(dt.rows[1].val1); // prints undefined
+     *  console.log(dt.rows[0].val2); // prints 2
+     *  console.log(dt.rows[1].val2); // prints 2
+    */
+    DataTable.prototype.removeColumn = function (columnName) {
+        for (var i = 0; i &lt; this.rows.length; i++) {
+            delete this.rows[i][columnName];
+        }
+    };
+    /** Renames an existing column in the Table
+     * @method DataTable#rename
+     * @param columnName {string} Name of the existing column to rename
+     * @param newName {string} New Name to apply to the column
+     * @example &lt;caption>Rename an existing column&lt;/caption>
+     *  var dt = new DataTable();
+     *  dt.rows.push({val1:1,val2:2},
+     *               {val1:2,val2:2});
+     *  dt.renameColumn('val1','val3');
+     *  console.log(dt.rows[0].val1); // prints undefined
+     *  console.log(dt.rows[1].val1); // prints undefined
+     *  console.log(dt.rows[0].val2); // prints 2
+     *  console.log(dt.rows[1].val2); // prints 2
+     *  console.log(dt.rows[0].val3); // prints 1
+     *  console.log(dt.rows[1].val3); // prints 2
+    */
+    DataTable.prototype.renameColumn = function (columnName, newName) {
+        for (var i = 0; i &lt; this.rows.length; i++) {
+            if (this.rows[i][columnName] !== undefined) {
+                this.rows[i][newName] = this.rows[i][columnName];
+                delete this.rows[i][columnName];
+            }
+        }
+    };
+    /** Saves the specified datatable object to the specified file.
+     * The format of the file depends on the extension provided.
+     * The supported formats are json, xml and xlsx.
+     * @method DataTable#save
+     * @param {dataTable} DataTable Table to save to the specified file.
+     * @param {fileName} string File path where to save the DataTable object. The path is relative to process.cwd()
+     * @example &lt;caption>Saves the datatable to a .json file&lt;/caption>
+     * var dt = new DataTable();
+     * dt.save('mydata.json');
+    */
+    DataTable.prototype.save = function (fileName) {
+        DataTableSerializer_1.DataTableSerializer.save(this, fileName);
+    };
+    /**
+     * Loads the {@link DataTable} object from the specified file.
+     * @memberof DataTable
+     * @static
+     * @param {fileName} string File path where to save the DataTable object. The path is relative to process.cwd()
+     * @example &lt;caption>Loads the table from an xlsx file&lt;/caption>
+     * var dt = DataTable.load('mydata.xlsx');
+     */
+    DataTable.load = function (fileName) {
+        return DataTableSerializer_1.DataTableSerializer.load(fileName);
+    };
+    return DataTable;
+}());
+exports.DataTable = DataTable;
+//# sourceMappingURL=DataTable.js.map</pre>
+    </article>
+</section>
+
+
+
+
+
+		</div>
+	</div>
+
+	<div class="clearfix"></div>
+
+	
+
+</div>
+</div>
+
+
+    <div class="modal fade" id="searchResults">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">Search results</h4>
+          </div>
+          <div class="modal-body"></div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          </div>
+        </div><!-- /.modal-content -->
+      </div><!-- /.modal-dialog -->
+    </div>
+
+
+<footer>
+
+
+	<span class="copyright">
+	(c) Cristhian Fernandez
+	</span>
+
+<span class="jsdoc-message">
+	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.1</a>
+	
+		on Wed Mar 29th 2017
+	
+	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
+</span>
+</footer>
+
+<script src="scripts/docstrap.lib.js"></script>
+<script src="scripts/toc.js"></script>
+
+    <script type="text/javascript" src="scripts/fulltext-search-ui.js"></script>
+
+
+<script>
+$( function () {
+	$( "[id*='$']" ).each( function () {
+		var $this = $( this );
+
+		$this.attr( "id", $this.attr( "id" ).replace( "$", "__" ) );
+	} );
+
+	$( ".tutorial-section pre, .readme-section pre, pre.prettyprint.source" ).each( function () {
+		var $this = $( this );
+
+		var example = $this.find( "code" );
+		exampleText = example.html();
+		var lang = /{@lang (.*?)}/.exec( exampleText );
+		if ( lang && lang[1] ) {
+			exampleText = exampleText.replace( lang[0], "" );
+			example.html( exampleText );
+			lang = lang[1];
+		} else {
+			var langClassMatch = example.parent()[0].className.match(/lang\-(\S+)/);
+			lang = langClassMatch ? langClassMatch[1] : "javascript";
+		}
+
+		if ( lang ) {
+
+			$this
+			.addClass( "sunlight-highlight-" + lang )
+			.addClass( "linenums" )
+			.html( example.html() );
+
+		}
+	} );
+
+	Sunlight.highlightAll( {
+		lineNumbers : true,
+		showMenu : true,
+		enableDoclinks : true
+	} );
+
+	$.catchAnchorLinks( {
+        navbarOffset: 10
+	} );
+	$( "#toc" ).toc( {
+		anchorName  : function ( i, heading, prefix ) {
+			return $( heading ).attr( "id" ) || ( prefix + i );
+		},
+		selectors   : "#toc-content h1,#toc-content h2,#toc-content h3,#toc-content h4",
+		showAndHide : false,
+		smoothScrolling: true
+	} );
+
+	$( "#main span[id^='toc']" ).addClass( "toc-shim" );
+	$( '.dropdown-toggle' ).dropdown();
+
+    $( "table" ).each( function () {
+      var $this = $( this );
+      $this.addClass('table');
+    } );
+
+} );
+</script>
+
+
+
+<!--Navigation and Symbol Display-->
+
+
+<!--Google Analytics-->
+
+<script>
+	(function ( i, s, o, g, r, a, m ) {
+		i['GoogleAnalyticsObject'] = r;
+		i[r] = i[r] || function () {
+			(i[r].q = i[r].q || []).push( arguments )
+		}, i[r].l = 1 * new Date();
+		a = s.createElement( o ),
+			m = s.getElementsByTagName( o )[0];
+		a.async = 1;
+		a.src = g;
+		m.parentNode.insertBefore( a, m )
+	})( window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga' );
+
+	ga( 'create', 'UA-85523002-1', 'dynamicsnode.js.org' );
+	ga( 'send', 'pageview' );
+</script>
+
+
+
+    <script type="text/javascript">
+        $(document).ready(function() {
+            SearcherDisplay.init();
+        });
+    </script>
+
+
+</body>
+</html>

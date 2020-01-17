@@ -1,0 +1,55 @@
+{
+  "name": "dynamicsnode",
+  "version": "0.0.19",
+  "description": "Create simple scripts to interact with Dynamics CRM using Node.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/crisfervil/DynamicsNode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/crisfervil/DynamicsNode/project/issues"
+  },
+  "author": {
+    "name": "Cristhian Fernandez",
+    "url": "https://github.com/crisfervil"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "debug": "^2.2.0",
+    "edge": "^6.5.1",
+    "elementtree": "^0.1.6",
+    "xlsx": "^0.8.0",
+    "xml-writer": "^1.6.0",
+    "yargs": "^5.0.0"
+  },
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "devDependencies": {
+    "@types/xlsx": "0.0.31",
+    "@types/mocha": "^2.2.38",
+    "@types/node": "^7.0.0",
+    "ink-docstrap": "^1.3.0",
+    "istanbul": "^0.4.5",
+    "jsdoc": "^3.4.1",
+    "mocha": "^3.1.0",
+    "typescript": "^2.2.1"
+  },
+  "scripts": {
+    "test": "mocha --recursive",
+    "integration-test": "mocha test/integration",
+    "build": "tsc",
+    "build-linux": "tsc && npm run build-linux-nuget && npm run build-linux-net",
+    "build-linux-nuget": "nuget restore src/cs/DynamicsNode.sln",
+    "build-linux-net": "xbuild src/cs/DynamicsNode.sln /p:Configuration=Release",
+    "cover": "istanbul cover ./node_modules/mocha/bin/_mocha -- --recursive",
+    "doc": "tsc && jsdoc -c jsdoc.json"
+  },
+  "keywords": [
+    "Dynamics",
+    "CRM",
+    "XRM"
+  ],
+  "bin": {
+    "dynamicsnode": "bin/commands.js"
+  }
+}

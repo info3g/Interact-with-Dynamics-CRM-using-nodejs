@@ -1,0 +1,41 @@
+language: node_js
+
+node_js:
+  - "node"
+
+env:
+  - CXX=g++-4.8
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - g++-4.8
+
+install:
+  - sudo apt-key adv --keyserver pgp.mit.edu --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+  # https://download.mono-project.com/archive/
+  # https://bugzilla.xamarin.com/show_bug.cgi?id=42169
+  # https://bugzilla.xamarin.com/show_bug.cgi?id=43473
+  # https://github.com/tjanczuk/edge/issues/449
+  - sudo sh -c "echo 'deb http://download.mono-project.com/repo/debian wheezy/snapshots/4.2.4 main' >> /etc/apt/sources.list.d/mono-xamarin.list"
+  - sudo sh -c "echo 'deb http://download.mono-project.com/repo/debian wheezy-libtiff-compat main' >> /etc/apt/sources.list.d/mono-xamarin.list"
+  - sudo apt-get update
+  - sudo apt-get install mono-complete
+  - sudo apt-get install nuget
+  - npm install -g grunt-cli
+  - npm install -g codecov
+  - npm install -g nyc
+  - npm install coveralls
+  - npm install
+  - npm install mocha-lcov-reporter
+
+before_script: npm run build-linux
+
+script:
+  - npm run cover
+  - nyc mocha
+  - nyc report --reporter=json
+  - codecov -f coverage/*.json
+  - nyc report --reporter=text-lcov | coveralls
